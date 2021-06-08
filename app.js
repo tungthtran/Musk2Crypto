@@ -4,50 +4,7 @@ const Discord = require('discord.js');
 const helper = require('./helper.js');
 const analyze = helper.analyze;
 const containsCrypto = helper.containsCrypto;
-
-const twitterClient = new Twitter({
-  consumer_key: process.env.API_KEY,
-  consumer_secret: process.env.API_SECRET,
-  access_token_key: process.env.ACCESS_TOKEN,
-  access_token_secret: process.env.ACCESS_TOKEN_SECRET,
-});
-
-const elonUrl = 'https://twitter.com/elonmusk';
-const screen_name = 'tungtran2222';
-const params = {screen_name: screen_name, count: '1', exclude_replies: 'true'};
-
-const timer = ms => new Promise(res => setTimeout(res, ms))
-
-twitterClient.get('statuses/user_timeline', params, async function(error, tweets, response) {
-    let previousId = 0;
-    while (true) {
-        if (!error) {
-            const tweet = tweets[0];
-            const text = tweet.text;
-            if (tweet.id != previousId) {
-                console.log("New tweet found. Content of the tweet: ");
-                console.log(text);
-                if (containsCrypto(text)) {
-                    const score = analyze(text);
-                    console.log("A cryptocurrency is mentioned at this tweet");
-                    console.log("Sentiment analysis score: " + score);
-                }
-                else {
-                    console.log("No cryptocurrency is mentioned at this tweet");
-                }
-                console.log("Checkout this new tweet at: " + elonUrl);
-                previousId = tweet.id;
-            }
-            else {
-                console.log("No new tweet after 10 seconds");
-            }
-        }
-        else {
-            console.log("Error while fetching tweets");
-        }
-        await timer(100000); 
-    }
-});
+const cryptoMentioned = helper.cryptoMentioned;
 
 const client = new Discord.Client();
 client.login(process.env.DISCORD_TOKEN);
@@ -80,4 +37,61 @@ const doCommands = (message) => {
             break;
     }
 }
+
+const twitterClient = new Twitter({
+  consumer_key: process.env.API_KEY,
+  consumer_secret: process.env.API_SECRET,
+  access_token_key: process.env.ACCESS_TOKEN,
+  access_token_secret: process.env.ACCESS_TOKEN_SECRET,
+});
+
+const elonUrl = 'https://twitter.com/elonmusk';
+const screen_name = 'elonmusk';
+const params = {screen_name: screen_name, count: '1', exclude_replies: 'true'};
+let noti = '';
+
+const timer = ms => new Promise(res => setTimeout(res, ms))
+
+twitterClient.get('statuses/user_timeline', params, async function(error, tweets, response) {
+    try {
+        let previousId = 0;
+        while (true) {
+            if (!error) {
+                const tweet = tweets[0];
+                const text = tweet.text;
+                if (tweet.id != previousId) {
+                    noti += "- New tweet found. Content of the tweet: ";
+                    noti += text + '\n';
+                    noti += ' ' + '\n';
+                    if (containsCrypto(text)) {
+                        await analyze(text).then((score) => {
+                            noti += "- Some cryptocurrencies are mentioned at this tweet: " + cryptoMentioned(text) + '\n';
+                            noti += "- Sentiment analysis score: " + score + '\n';  
+                        }).catch(error => console.log(error));
+                    }
+                    else {
+                        noti += "No cryptocurrency is mentioned at this tweet" + '\n';
+                    }
+                    noti += "- Checkout this new tweet at: " + elonUrl + '\n';
+                    const channel = client.channels.cache.find(channel => channel.id === '840975274836623447');
+                    channel.send(noti);
+
+                    previousId = tweet.id;
+                }
+                else {
+                    console.log("No new tweet after 100 seconds");
+                }
+            }
+            else {
+                console.log("Error while fetching tweets");
+            }
+            await timer(100000); 
+        }
+    }
+    catch {
+        console.log("Something went wrong");
+    }
+});
+
+
 

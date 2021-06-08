@@ -1,4 +1,5 @@
 import sys
+import os
 import nltk
 
 from nltk.corpus import stopwords
@@ -27,3 +28,6 @@ def analyze():
     testimonial = TextBlob(stem_text)
     print(testimonial.sentiment.polarity)
     sys.stdout.flush()
+    os.fsync(sys.stdout.fileno())
+
+analyze()

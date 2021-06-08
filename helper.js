@@ -4,26 +4,39 @@ const cryptoSymbols = coins.map(coin => coin.symbol);
 
 const containsCrypto = (input) => {
     const newInput = input.toLowerCase()
-    if (cryptoNames.some(name => newInput.includes(name.toLowerCase()))) {
-        return true;
-    }
-    if (cryptoSymbols.some(symbol => newInput.includes(symbol.toLowerCase()))) {
-        return true;
-    }
-    return false;
+    return cryptoNames.some(name => newInput.includes(name.toLowerCase())) || cryptoSymbols.some(symbol => newInput.includes(symbol.toLowerCase()));
 }
 
 const analyze = (input) => {
-    const { spawn } = require("child_process");
-    const pythonProcess = spawn('python', ["./sentiment.py", input]);
-    pythonProcess.stdout.on('data', (data) => {
-        console.log(data);
-        return data;
-    });
+    return new Promise((resolve , reject) => {
+        const { spawn } = require("child_process");
+        const childPython = spawn('python' ,['./sentiment.py', input]);
+        let result = '';
+        childPython.stdout.on(`data` , (data) => {
+            result += data.toString();
+        });
+    
+        childPython.on('close' , (code) => {
+            resolve(result)
+        });
+        childPython.on('error' , (err) => {
+            reject(err)
+        });
+    })
+}
+
+const cryptoMentioned = (input) => {
+    const newInput = input.toLowerCase()
+    const crypName = cryptoNames.filter(name => newInput.includes(name.toLowerCase()));
+    const crypSymbol = cryptoSymbols.filter(symbol => newInput.includes(symbol.toLowerCase()));
+    if (crypName) return crypName;
+    else if (crypSymbol) return crypSymbol;
+    else return 'No cryptocurrency found';
 }
 
 module.exports = {
     analyze: analyze,
     containsCrypto: containsCrypto,
+    cryptoMentioned: cryptoMentioned
 }
 

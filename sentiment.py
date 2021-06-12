@@ -10,7 +10,7 @@ from textblob import TextBlob
 nltk.download("stopwords")
 nltk.download("wordnet")
 stop_words = stopwords.words("english")
-stemmer = SnowballStemmer("english", ignore_stopwords=True)
+stemmer = SnowballStemmer("english", ignore_stopwords=True) 
 lemmatizer = WordNetLemmatizer()
 tokenizer = RegexpTokenizer(r"\w+")
 

@@ -1,10 +1,8 @@
 const coins = require('coinlist');
 const cryptoNames = coins.map(coin => coin.name);
-const cryptoSymbols = coins.map(coin => coin.symbol);
 
 const containsCrypto = (input) => {
-    const newInput = input.toLowerCase()
-    return cryptoNames.some(name => newInput.includes(name.toLowerCase())) || cryptoSymbols.some(symbol => newInput.includes(symbol.toLowerCase()));
+    return cryptoNames.some(name => checkWord(name, input));
 }
 
 const analyze = (input) => {
@@ -15,7 +13,6 @@ const analyze = (input) => {
         childPython.stdout.on(`data` , (data) => {
             result += data.toString();
         });
-    
         childPython.on('close' , (code) => {
             resolve(result)
         });
@@ -26,12 +23,20 @@ const analyze = (input) => {
 }
 
 const cryptoMentioned = (input) => {
-    const newInput = input.toLowerCase()
-    const crypName = cryptoNames.filter(name => newInput.includes(name.toLowerCase()));
-    const crypSymbol = cryptoSymbols.filter(symbol => newInput.includes(symbol.toLowerCase()));
-    if (crypName) return crypName;
-    else if (crypSymbol) return crypSymbol;
+    const crypName = cryptoNames.filter(name => checkWord(name, input));
+    if (crypName.length > 0) return crypName.join(', ');
     else return 'No cryptocurrency found';
+}
+
+// helper to check if a string contains a WORD
+const checkWord = (word, str) => {
+    const allowedSeparator = '\\\s,;"\'|';
+    const regex = new RegExp(
+      `(^.*[${allowedSeparator}]${word}$)|(^${word}[${allowedSeparator}].*)|(^${word}$)|(^.*[${allowedSeparator}]${word}[${allowedSeparator}].*$)`,
+      // Case insensitive
+      'i',
+    );
+    return regex.test(str);
 }
 
 module.exports = {

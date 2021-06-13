@@ -3,10 +3,10 @@ const Twitter = require('twitter');
 const Discord = require('discord.js');
 const helper = require('./helper.js');
 const nomics = require('./nomics.js');
+const fetch = require('node-fetch');
 const analyze = helper.analyze;
 const containsCrypto = helper.containsCrypto;
 const cryptoMentioned = helper.cryptoMentioned;
-const cryptoInfo = nomics.cryptoInfo;
 
 const client = new Discord.Client();
 client.login(process.env.DISCORD_TOKEN);
@@ -35,7 +35,21 @@ const doCommands = (message) => {
     const content = message.content.substr(1);
     switch (content.substr(0, 4)) {
         case "info":
-            message.reply(cryptoInfo(content.substr(5)))
+            fetch(`https://api.nomics.com/v1/currencies/ticker?key=${process.env.NOMICS_API_KEY}&ids=${content.substr(5).toUpperCase()}&interval=1d,30d&convert=EUR&per-page=100&page=1`)
+            .then(response => response.json())
+            .then(data => {
+                let response = '' + "\n";
+                const arrayLength = content.substr(5).toUpperCase().split(",").length;
+                for (let i = 0; i < arrayLength; i++) {
+                    response += "Coin name: " + data[i].name + "\n"; 
+                    response += "Coin symbol: " + data[i].symbol + "\n";
+                    response += "Coin price: $" + data[i].price + "\n";
+                    response += "Price date: " + data[i].price_date + "\n";
+                    response += "Market cap: " + data[i].market_cap + "\n";
+                    response += "\n";
+                }
+                message.reply(response);
+            })    
             break;
         default:
             message.reply("Please try other commands.")
@@ -51,13 +65,12 @@ const twitterClient = new Twitter({
 });
 
 const elonUrl = 'https://twitter.com/elonmusk';
-const screen_name = 'tungtran2222';
+const screen_name = 'elonmusk';
 const params = {screen_name: screen_name, count: '1', exclude_replies: 'true'};
 
 const timer = ms => new Promise(res => setTimeout(res, ms))
 
-twitterClient.get('statuses/user_timeline', params, async function(error, tweets, response) {
-        const channel = client.channels.cache.get('840975275206115378');
+twitterClient.get('statuses/user_timeline', params, async function(error, tweets) {
         let previousId = 0;
         while (true) {
             let noti = '';
@@ -69,17 +82,16 @@ twitterClient.get('statuses/user_timeline', params, async function(error, tweets
                     noti += text + '\n';
                     noti += ' ' + '\n';
                     if (containsCrypto(text)) {
-                        analyze(text).then((score) => {
-                            noti += "- Some cryptocurrencies are mentioned at this tweet: " + cryptoMentioned(text) + '\n';
-                            noti += "- Sentiment analysis score: " + score + '\n';              
-                        }).catch(error => console.log(error));
+                        const score = await analyze(text);
+                        noti += "- Some cryptocurrencies are mentioned at this tweet: " + cryptoMentioned(text) + '\n';
+                        noti += "- Sentiment analysis score: " + score + '\n';          
                     }
                     else {
                         noti += "- No cryptocurrency is mentioned at this tweet" + '\n';
                     }
                     noti += "- Checkout this new tweet at: " + elonUrl + '\n';
-                    //hannel.send(noti);'
-                    console.log(noti)
+                    const channel = await client.channels.fetch('840975275206115378');
+                    channel.send(noti);
                     previousId = tweet.id;
                 }
                 else {
@@ -89,6 +101,4 @@ twitterClient.get('statuses/user_timeline', params, async function(error, tweets
             await timer(100000); 
         }
 });
-
-
 

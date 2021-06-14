@@ -2,7 +2,6 @@ require('dotenv').config();
 const Twitter = require('twitter');
 const Discord = require('discord.js');
 const helper = require('./helper.js');
-const nomics = require('./nomics.js');
 const fetch = require('node-fetch');
 const analyze = helper.analyze;
 const containsCrypto = helper.containsCrypto;
@@ -12,9 +11,6 @@ const client = new Discord.Client();
 client.login(process.env.DISCORD_TOKEN);
 
 client.on('ready', () => {
-    client.user.setActivity("for Elon Musk's new tweets", {
-        type: "WAITING"
-      });
     console.log(`Logged in as ${client.user.tag}!`);
     client.guilds.cache.forEach(guild => {
         console.log("Server: " + guild.name);
@@ -28,32 +24,31 @@ client.on('message', receivedMsg => {
     if (receivedMsg.content.startsWith("!")) {
         doCommands(receivedMsg);
     }
-    //else do nothing
 });
 
-const doCommands = (message) => {
+const doCommands = async (message) => {
     const content = message.content.substr(1);
-    switch (content.substr(0, 4)) {
-        case "info":
-            fetch(`https://api.nomics.com/v1/currencies/ticker?key=${process.env.NOMICS_API_KEY}&ids=${content.substr(5).toUpperCase()}&interval=1d,30d&convert=EUR&per-page=100&page=1`)
-            .then(response => response.json())
-            .then(data => {
-                let response = '' + "\n";
-                const arrayLength = content.substr(5).toUpperCase().split(",").length;
-                for (let i = 0; i < arrayLength; i++) {
-                    response += "Coin name: " + data[i].name + "\n"; 
-                    response += "Coin symbol: " + data[i].symbol + "\n";
-                    response += "Coin price: $" + data[i].price + "\n";
-                    response += "Price date: " + data[i].price_date + "\n";
-                    response += "Market cap: " + data[i].market_cap + "\n";
-                    response += "\n";
-                }
-                message.reply(response);
-            })    
-            break;
-        default:
-            message.reply("Please try other commands.")
-            break;
+    if (content.startsWith("info")) {
+        const promiseRes = await fetch(`https://api.nomics.com/v1/currencies/ticker?key=${process.env.NOMICS_API_KEY}&ids=${content.substr(5).toUpperCase()}&interval=1d,30d&convert=EUR&per-page=100&page=1`);
+        const data = await promiseRes.json();
+        let response = '' + "\n";
+        const arrayLength = content.substr(5).toUpperCase().split(",").length;
+        for (let i = 0; i < arrayLength; i++) {
+            response += "Coin name: " + data[i].name + "\n"; 
+            response += "Coin symbol: " + data[i].symbol + "\n";
+            response += "Coin price: $" + data[i].price + "\n";
+            response += "Price date: " + data[i].price_date + "\n";
+            response += "Market cap: " + data[i].market_cap + "\n";
+            response += "\n";
+        }
+        message.reply(response); 
+    }
+
+    else if (content.startsWith("hi")) {
+        message.reply("Hi. How can I help you?");
+    }
+    else {
+        message.reply("Please try other commands (!info, ...)")
     }
 }
 
